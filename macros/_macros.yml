@@ -1,0 +1,13 @@
+version: 2
+
+macros:
+  - name: cents_to_dollars
+    description: converts your money amount from cents to the amount in dollars.
+    docs:
+      show: true
+    arguments:
+      - name: column_name
+        type: string
+        description: the name of the column that you want to convert to dollars from cents.
+
+  

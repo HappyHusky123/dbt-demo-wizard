@@ -1,0 +1,75 @@
+version: 2
+
+sources:
+
+- name: jaffle_shop
+  description: Data sources for the jaffle_shop source.
+  database: raw
+  schema: jaffle_shop
+  loader: fivetran
+  tags: 
+    - nightly
+    - silver
+  config: 
+    meta: 
+      owner: 'jrankin'
+      contains_pii: true
+
+  quoting:
+    database: false
+    schema: false
+    identifier: false
+
+  tables:
+    - name: customers
+      description: One record per person who has purchased one or more items.
+    - name: items
+      description: Items included in an order
+    - name: orders
+      description: One record per order (consisting of one or more order items)
+      loaded_at_field: ordered_at
+    - name: stores
+    - name: products
+      description: One record per SKU for items sold in stores
+    - name: supplies
+      description: One record per supply per SKU of items sold in stores
+
+- name: stripe
+  database: raw
+  schema: stripe
+  description: Sources for the stripe payments data.
+
+  tables:
+    - name: payment
+      loaded_at_field: _batched_at
+      freshness: 
+        error_after: {count: 1, period: 'day'}
+
+      columns:
+        - name: id
+          description: Primary key. Uniquely identifies a payment.
+          tests:
+            - not_null
+            - unique
+        - name: orderid
+        - name: status
+        - name: amount
+        - name: created
+        - name: _batched_at
+
+- name: environmental
+  database: raw
+  loader: manual
+  
+  tables:
+    - name: water_levels
+      description: contains water level data for a particular location and various readings.
+
+      columns: 
+        - name: eventid
+        - name: date
+        - name: gauge
+        - name: height
+
+    - name: wells_state
+      description: Contains one row per well, and details the state of the well.

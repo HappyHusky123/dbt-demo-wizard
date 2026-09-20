@@ -1,0 +1,23 @@
+version: 2
+
+seeds:
+  - name: countrycodes
+    description: Contains country code reference information
+    config:
+      quote_columns: false
+      column_types: {code: string, country_name: string}
+      delimiter: ","
+
+      meta:
+        contains_pii: false
+        owner: "Smokey the Bear"
+
+      tags: 
+        - nightly
+        - silver
+
+      schema: reference
+      database: analytics
+      enabled: true
+      groups: finance
+      alias: jaffle_country_codes

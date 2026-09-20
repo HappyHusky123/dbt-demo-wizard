@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: fct_product_orders
+    latest_version: 1
+    description: 1 row per item on an order.
+
+    config:
+      contract:
+        enforced: true
+      tags:
+        - nightly
+        - gold
+      
+    columns:
+      - name: order_id
+        description: Unique identifier of the order.
+        data_type: string
+        constraints:
+          - type: not_null
+      - name: customer_id
+        description: Unique identifier of the customer.
+        data_type: string
+        constraints:
+          - type: not_null
+      
+      - name: product_name
+        description: Name of the product on the order.
+        data_type: string
+
+
+      - name: order_total
+        description: Total amount for the order.
+        data_type: number
+
+    versions: 
+      - v: 1
+        config:
+          alias: fct_product_orders
+        
+      - v: 2
+        config: 
+          contract:
+            enforced: false
+        columns:
+          - name: total_minus_fee
+            data_type: number
+          - include: all
+            exclude: [customer_id]
