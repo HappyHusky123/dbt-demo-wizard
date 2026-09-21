@@ -1,0 +1,211 @@
+version: 2
+
+models:
+  - name: stg_tpcds__store_sales
+    description: >
+      Store sales transaction lines, one row per item per ticket. Filtered to the
+      date key window set by the tpcds_start_date_sk and tpcds_end_date_sk
+      variables. Without that filter this reads 28.8 billion rows.
+    columns:
+      - name: ticket_number
+        description: Sales ticket identifier. Unique only in combination with item_key.
+        data_tests:
+          - not_null
+      - name: item_key
+        description: Foreign key to stg_tpcds__item.item_key, identifying a specific product version.
+        data_tests:
+          - not_null
+      - name: sold_date_key
+        description: Foreign key to stg_tpcds__date.date_key. The partitioning key of the source table.
+        data_tests:
+          - not_null
+      - name: store_key
+        description: Foreign key to stg_tpcds__store.store_key.
+      - name: customer_key
+        description: Foreign key to stg_tpcds__customer.customer_key.
+      - name: promotion_key
+        description: Foreign key to stg_tpcds__promotion.promotion_key. Null when the sale was not promotional.
+      - name: quantity_sold
+        description: Units sold on this line.
+      - name: extended_sales_amount
+        description: Unit sales price multiplied by quantity, before tax and before coupons.
+      - name: extended_wholesale_cost_amount
+        description: Unit wholesale cost multiplied by quantity. The basis for gross margin.
+      - name: net_paid_amount
+        description: Amount actually paid, excluding tax.
+      - name: net_profit_amount
+        description: Profit as calculated by the benchmark. Retained for comparison against our own margin logic.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - ticket_number
+              - item_key
+
+  - name: stg_tpcds__store_returns
+    description: >
+      Store return lines, one row per item per return ticket. Filtered to the same
+      date key window as store sales, but on the returned date rather than the
+      sold date.
+    columns:
+      - name: ticket_number
+        description: Return ticket identifier. Unique only in combination with item_key.
+        data_tests:
+          - not_null
+      - name: item_key
+        description: Foreign key to stg_tpcds__item.item_key.
+        data_tests:
+          - not_null
+      - name: returned_date_key
+        description: Foreign key to stg_tpcds__date.date_key. The partitioning key of the source table.
+        data_tests:
+          - not_null
+      - name: store_key
+        description: Foreign key to stg_tpcds__store.store_key.
+      - name: quantity_returned
+        description: Units returned on this line.
+      - name: return_amount
+        description: Value of the returned goods, excluding tax.
+      - name: net_loss_amount
+        description: Loss on the return as calculated by the benchmark.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - ticket_number
+              - item_key
+
+  - name: stg_tpcds__date
+    description: Conformed date dimension, one row per calendar day from 1900 to 2100.
+    columns:
+      - name: date_key
+        description: Julian day number. The surrogate key every fact table joins on.
+        data_tests:
+          - unique
+          - not_null
+      - name: calendar_date
+        description: The calendar date itself.
+        data_tests:
+          - not_null
+      - name: calendar_year
+        description: Four digit year.
+      - name: month_of_year
+        description: Month number, 1 through 12.
+      - name: holiday_flag
+        description: Y or N. Converted to a boolean in dim_date.
+      - name: weekend_flag
+        description: Y or N. Converted to a boolean in dim_date.
+
+  - name: stg_tpcds__item
+    description: >
+      Product catalogue with a slowly changing type 2 history. One row per product
+      version, not per product. All versions are retained because the fact tables
+      join on the version level surrogate key.
+    columns:
+      - name: item_key
+        description: Surrogate key identifying one version of a product.
+        data_tests:
+          - unique
+          - not_null
+      - name: item_id
+        description: Natural key identifying a product across all of its versions. Deliberately not unique.
+        data_tests:
+          - not_null
+      - name: category_name
+        description: Top level of the product hierarchy.
+      - name: class_name
+        description: Middle level of the product hierarchy.
+      - name: brand_name
+        description: Brand the product is sold under.
+      - name: record_end_date
+        description: End of this version's validity. Null on the current version.
+
+  - name: stg_tpcds__customer
+    description: Customer master, roughly 65 million rows at the 10 TB scale factor.
+    columns:
+      - name: customer_key
+        description: Surrogate key for the customer.
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Natural key for the customer.
+      - name: customer_demographics_key
+        description: Foreign key to stg_tpcds__customer_demographics.
+      - name: customer_address_key
+        description: Foreign key to stg_tpcds__customer_address, the customer's current address.
+      - name: birth_year
+        description: Year of birth. Combined with birth month and day in dim_customer.
+      - name: preferred_customer_flag
+        description: Y or N. Converted to a boolean in dim_customer.
+
+  - name: stg_tpcds__customer_address
+    description: Address dimension, roughly 32.5 million rows at the 10 TB scale factor.
+    columns:
+      - name: customer_address_key
+        description: Surrogate key for the address.
+        data_tests:
+          - unique
+          - not_null
+      - name: state_code
+        description: Two letter state code. Joined to the store_sales_regions seed in dim_store.
+      - name: city_name
+        description: City the address sits in.
+      - name: postal_code
+        description: Postal code.
+
+  - name: stg_tpcds__customer_demographics
+    description: >
+      Demographic attribute combinations, one row per unique combination. Snowflaked
+      off customer rather than held on it.
+    columns:
+      - name: customer_demographics_key
+        description: Surrogate key for the demographic combination.
+        data_tests:
+          - unique
+          - not_null
+      - name: gender_code
+        description: Single character gender code.
+      - name: marital_status_code
+        description: Single character marital status code.
+      - name: education_status
+        description: Highest level of education attained.
+      - name: annual_purchase_estimate
+        description: Modelled annual spend for this demographic combination.
+
+  - name: stg_tpcds__store
+    description: >
+      Physical store dimension with a slowly changing type 2 history, roughly 1,000
+      rows. The benchmark's s_tax_precentage typo is corrected to
+      sales_tax_percentage here.
+    columns:
+      - name: store_key
+        description: Surrogate key identifying one version of a store.
+        data_tests:
+          - unique
+          - not_null
+      - name: store_id
+        description: Natural key identifying a store across all of its versions. Deliberately not unique.
+      - name: store_name
+        description: Store name.
+      - name: state_code
+        description: Two letter state code, joined to the store_sales_regions seed in dim_store.
+      - name: sales_tax_percentage
+        description: Sales tax rate. Spelled s_tax_precentage in the TPC-DS source.
+      - name: record_end_date
+        description: End of this version's validity. Null on the current version.
+
+  - name: stg_tpcds__promotion
+    description: Marketing promotions and the channels each one ran on, roughly 2,000 rows.
+    columns:
+      - name: promotion_key
+        description: Surrogate key for the promotion.
+        data_tests:
+          - unique
+          - not_null
+      - name: promotion_name
+        description: Promotion name.
+      - name: promotion_cost
+        description: Cost of running the promotion.
+      - name: channel_email_flag
+        description: Y or N. Collapsed with the other channel flags in fct_store_sales.

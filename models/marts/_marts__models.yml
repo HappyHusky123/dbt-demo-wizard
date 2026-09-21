@@ -1,0 +1,207 @@
+version: 2
+
+models:
+  - name: rpt_daily_store_sales
+    description: >
+      Daily sales and returns by store, one row per store per trading day. The
+      primary feed for the retail performance dashboard.
+
+      This model has an enforced contract. Adding, removing or retyping a column
+      here is a breaking change and dbt will fail the build rather than let it
+      through, which is the point.
+    config:
+      contract:
+        enforced: true
+      group: retail_analytics
+      access: public
+      tags: [reporting, daily]
+      meta:
+        grain: One row per store per trading day
+        refresh: Daily
+    columns:
+      - name: sales_date
+        description: Trading date.
+        data_type: date
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null
+      - name: store_key
+        description: Foreign key to dim_store.
+        data_type: number(38, 0)
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null
+      - name: store_id
+        description: Natural key for the store.
+        data_type: varchar
+      - name: store_name
+        description: Store name.
+        data_type: varchar
+      - name: sales_region
+        description: Region the store rolls up to, from the store_sales_regions seed.
+        data_type: varchar
+      - name: state_code
+        description: Two letter state code.
+        data_type: varchar
+      - name: calendar_year
+        description: Four digit year of the trading date.
+        data_type: number(38, 0)
+      - name: year_month
+        description: YYYY-MM label of the trading date.
+        data_type: varchar
+      - name: is_weekend
+        description: True on Saturdays and Sundays.
+        data_type: boolean
+      - name: transaction_count
+        description: Distinct sales tickets.
+        data_type: number(38, 0)
+      - name: line_item_count
+        description: Sales lines across all tickets.
+        data_type: number(38, 0)
+      - name: units_sold
+        description: Units sold.
+        data_type: number(38, 0)
+      - name: gross_sales_amount
+        description: Extended sales price before discounts and tax.
+        data_type: number(18, 2)
+      - name: discount_amount
+        description: Extended discounts plus coupons.
+        data_type: number(18, 2)
+      - name: net_sales_amount
+        description: Amount paid by customers, excluding tax.
+        data_type: number(18, 2)
+      - name: gross_margin_amount
+        description: Net sales minus extended wholesale cost.
+        data_type: number(18, 2)
+      - name: gross_margin_pct
+        description: Gross margin as a fraction of net sales. Zero when there were no net sales.
+        data_type: number(9, 4)
+      - name: units_returned
+        description: Units returned on this date at this store. Zero filled.
+        data_type: number(38, 0)
+      - name: return_amount
+        description: Value of goods returned on this date at this store. Zero filled.
+        data_type: number(18, 2)
+      - name: return_rate_pct
+        description: >
+          Return amount as a fraction of gross sales on the same date. Returns are
+          dated when they happened, so this can exceed one on a day when an
+          earlier day's sales came back.
+        data_type: number(9, 4)
+      - name: average_transaction_amount
+        description: Net sales divided by distinct tickets.
+        data_type: number(18, 2)
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - sales_date
+              - store_key
+
+  - name: rpt_category_performance
+    description: >
+      Product category performance by month, one row per category per month.
+      Includes promotion attribution and return rate.
+    config:
+      group: retail_analytics
+      access: public
+      tags: [reporting, monthly]
+      meta:
+        grain: One row per product category per month
+    columns:
+      - name: year_month
+        description: YYYY-MM label of the sales month.
+        data_tests:
+          - not_null
+      - name: category_name
+        description: Top level of the product hierarchy. Unknown where the source category is null.
+        data_tests:
+          - not_null
+      - name: transaction_count
+        description: Distinct sales tickets containing this category.
+      - name: distinct_products_sold
+        description: Distinct item versions sold in this category.
+      - name: units_sold
+        description: Units sold.
+      - name: net_sales_amount
+        description: Amount paid by customers, excluding tax.
+      - name: gross_margin_amount
+        description: Net sales minus extended wholesale cost.
+      - name: gross_margin_pct
+        description: Gross margin as a fraction of net sales.
+      - name: promotional_sales_amount
+        description: Net sales on lines attached to a promotion.
+      - name: promotional_sales_pct
+        description: Promotional sales as a fraction of net sales.
+      - name: units_returned
+        description: Units returned in this category in this month. Zero filled.
+      - name: return_rate_pct
+        description: >
+          Return amount as a fraction of gross sales in the same month. Returns are
+          attributed to the month the return happened, not the month of the sale.
+      - name: average_unit_price
+        description: Net sales divided by units sold.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - year_month
+              - category_name
+
+  - name: rpt_customer_segment_sales
+    description: >
+      Sales by customer spend segment and month, split by generation and gender.
+      Segment reflects the customer's current demographics rather than their
+      demographics at the time of sale.
+    config:
+      group: retail_analytics
+      access: public
+      tags: [reporting, monthly]
+      meta:
+        grain: One row per segment, generation, gender and month
+    columns:
+      - name: year_month
+        description: YYYY-MM label of the sales month.
+        data_tests:
+          - not_null
+      - name: customer_segment
+        description: Spend band from dim_customer. Unknown where the customer has no demographics.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['High Value', 'Mid Value', 'Low Value', 'Minimal', 'Unknown']
+      - name: generation_band
+        description: Birth year band from dim_customer.
+        data_tests:
+          - not_null
+      - name: gender
+        description: Decoded gender from dim_customer.
+        data_tests:
+          - not_null
+      - name: active_customer_count
+        description: Distinct customers who bought in this month and segment.
+      - name: transaction_count
+        description: Distinct sales tickets.
+      - name: units_sold
+        description: Units sold.
+      - name: net_sales_amount
+        description: Amount paid by customers, excluding tax.
+      - name: gross_margin_amount
+        description: Net sales minus extended wholesale cost.
+      - name: gross_margin_pct
+        description: Gross margin as a fraction of net sales.
+      - name: sales_per_customer
+        description: Net sales divided by distinct active customers.
+      - name: average_transaction_amount
+        description: Net sales divided by distinct tickets.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - year_month
+              - customer_segment
+              - generation_band
+              - gender

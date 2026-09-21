@@ -1,0 +1,9 @@
+version: 2
+
+groups:
+  - name: retail_analytics
+    owner:
+      name: Retail Analytics
+      email: jacob.rankin@7riversinc.com
+      slack: retail-analytics
+      github: 7riversinc

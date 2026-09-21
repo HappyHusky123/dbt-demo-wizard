@@ -1,8 +1,0 @@
-version: 2
-
-groups:
-  - name: finance
-    owner:
-      email: finance@jaffleshop.com
-      slack: finance-data
-      github: finance-data-team

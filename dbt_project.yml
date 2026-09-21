@@ -1,49 +1,57 @@
-name: jaffle_shop_sweets
+name: dbt_demo_wizard
 version: '1.0.0'
 config-version: 2
 
-profile: my-snowflake-db
+profile: dbt_demo_wizard
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
 
 target-path: target
 clean-targets: [target, dbt_packages]
 
 packages-install-path: dbt_packages
 
-require-dbt-version: [">1.0.0", "<=1.9.2"]
-
-model-paths: ["models"]
-analysis-paths: ["analyses"]
-test-paths: ["tests"]
-snapshot-paths: ["snapshots"]
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
-asset-paths: ["assets"]
-
-query-comment: 'this is my super cool project'
-
-flags:
-  fail_fast: true
-
 quoting:
   database: false
   schema: false
   identifier: false
 
-models:
-  jaffle_shop_sweets:
-    marts:
-      +required_tests: {"unique.*|not_null": 1}
-      +materialized: table
-      +schema: dbo
-    intermediate:
-      +materialized: ephemeral
-
 vars:
-  start_date: "2025-01-01"
-  max_count_value: 30
-  string_value: "HeyHoHi"
+  # Which TPC-DS scale factor to read. TPCDS_SF100TCL is the 100 TB set and is
+  # structurally identical; this demo uses the 10 TB set so builds stay inside
+  # the 5 minute command timeout that dbt Wizard enforces in the platform.
+  tpcds_schema: TPCDS_SF10TCL
 
-on-run-start: SELECT 1
-on-run-end: SELECT 1
+  # Date surrogate key window applied to every fact staging model. d_date_sk is
+  # the Julian day number, so 2452276 is 2002-01-01. The fact tables are
+  # partitioned on this key, so the predicate prunes micro-partitions hard.
+  #
+  #   one week  2452282   (default)
+  #   January   2452306
+  #   all 2002  2452640
+  tpcds_start_date_sk: 2452276
+  tpcds_end_date_sk: 2452282
 
-restrict-access: false
+models:
+  dbt_demo_wizard:
+    staging:
+      +schema: STAGE
+      +materialized: view
+    intermediate:
+      +schema: CURATED
+      +materialized: table
+    # Every model in marts carries explicit not_null tests. The +required_tests
+    # config that would enforce that as a rule is rejected by dbt Fusion
+    # 2.0.0-preview: it reads the regex key as an unrecognised custom config.
+    marts:
+      +schema: DATA_VIZ
+      +materialized: table
+
+seeds:
+  dbt_demo_wizard:
+    +schema: STAGE

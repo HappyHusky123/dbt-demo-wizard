@@ -1,0 +1,24 @@
+version: 2
+
+exposures:
+  - name: retail_performance_dashboard
+    label: Retail Performance
+    type: dashboard
+    maturity: high
+    url: https://bi.internal/dashboards/retail-performance
+    description: >
+      Daily trading dashboard for store operations. Sales, margin and return rate
+      by store and region, with category and customer segment breakdowns.
+
+      This is the reason the DATA_VIZ models exist. Anything that changes their
+      columns breaks a dashboard someone looks at every morning, which is what
+      makes it a useful thing to ask an agent about before editing a model.
+
+    depends_on:
+      - ref('rpt_daily_store_sales')
+      - ref('rpt_category_performance')
+      - ref('rpt_customer_segment_sales')
+
+    owner:
+      name: Retail Analytics
+      email: jacob.rankin@7riversinc.com

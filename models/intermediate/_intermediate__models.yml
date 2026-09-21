@@ -1,0 +1,264 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: >
+      Conformed date dimension. Y/N flags from the benchmark are converted to
+      booleans here, and the period boundaries every BI tool asks for are derived
+      once so no downstream model repeats the date arithmetic.
+    config:
+      group: retail_analytics
+      access: protected
+      tags: [dimension]
+    columns:
+      - name: date_key
+        description: Julian day number. Primary key, joined by every fact.
+        data_tests:
+          - unique
+          - not_null
+      - name: calendar_date
+        description: The calendar date.
+        data_tests:
+          - not_null
+      - name: year_month
+        description: YYYY-MM label. The month grain used by the DATA_VIZ reports.
+      - name: is_weekend
+        description: True on Saturdays and Sundays. Derived from weekend_flag.
+      - name: is_holiday
+        description: True on benchmark defined holidays. Derived from holiday_flag.
+
+  - name: dim_item
+    description: >
+      Product dimension at version grain. All slowly changing dimension versions
+      are retained because the facts join on the version level surrogate key;
+      filtering to current records here would drop fact rows.
+    config:
+      group: retail_analytics
+      access: protected
+      tags: [dimension]
+    columns:
+      - name: item_key
+        description: Surrogate key for one version of a product. Primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: item_id
+        description: Natural key identifying a product across versions. Not unique by design.
+        data_tests:
+          - not_null
+      - name: category_name
+        description: Top level of the product hierarchy. The grain of rpt_category_performance.
+      - name: product_hierarchy
+        description: Category, class and brand as one sortable label.
+      - name: is_current_record
+        description: True when this is the live version of the product.
+        data_tests:
+          - not_null
+
+  - name: dim_store
+    description: >
+      Store dimension at version grain. Sales region comes from the
+      store_sales_regions seed, since TPC-DS has no region concept of its own.
+    config:
+      group: retail_analytics
+      access: protected
+      tags: [dimension]
+    columns:
+      - name: store_key
+        description: Surrogate key for one version of a store. Primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: store_name
+        description: Store name.
+      - name: sales_region
+        description: >
+          Region the store rolls up to, from the store_sales_regions seed. Stores
+          in an uncovered state fall back to Unassigned rather than null, so
+          regional totals never silently drop a store.
+        data_tests:
+          - not_null
+      - name: store_location
+        description: City and state as one label.
+      - name: is_current_record
+        description: True when this is the live version of the store.
+        data_tests:
+          - not_null
+
+  - name: dim_customer
+    description: >
+      Conformed customer dimension. Flattens the snowflaked customer, address and
+      demographics tables into one row per customer. Both joins are left joins so
+      customers with no demographics or address are never dropped.
+    config:
+      group: retail_analytics
+      access: protected
+      tags: [dimension, pii]
+      meta:
+        contains_pii: true
+    columns:
+      - name: customer_key
+        description: Surrogate key for the customer. Primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Natural key for the customer.
+      - name: full_name
+        description: First and last name concatenated.
+      - name: email_address
+        description: Customer email address. Personally identifiable.
+      - name: customer_segment
+        description: >
+          Spend band derived from annual_purchase_estimate: High Value, Mid Value,
+          Low Value, Minimal or Unknown. The primary slicer for
+          rpt_customer_segment_sales.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['High Value', 'Mid Value', 'Low Value', 'Minimal', 'Unknown']
+      - name: gender
+        description: Decoded from the single character demographics code.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Male', 'Female', 'Unknown']
+      - name: marital_status
+        description: Decoded from the single character demographics code.
+      - name: generation_band
+        description: >
+          Banded from birth year rather than calculated against current_date, so
+          the model output does not drift from one run to the next.
+      - name: birth_date
+        description: >
+          Assembled from the three birth part columns. Null where the benchmark
+          generated an impossible combination such as 31 February.
+      - name: state_code
+        description: State of the customer's current address.
+
+  - name: fct_store_sales
+    description: >
+      Store sales at transaction line grain, one row per item per ticket. The
+      central fact of the project and the source for every model in DATA_VIZ.
+      Restricted to the date key window set by tpcds_start_date_sk and
+      tpcds_end_date_sk.
+    config:
+      group: retail_analytics
+      access: protected
+      tags: [fact]
+      meta:
+        grain: One row per item per sales ticket
+    columns:
+      - name: ticket_number
+        description: Sales ticket identifier. Unique only with item_key.
+        data_tests:
+          - not_null
+      - name: item_key
+        description: Foreign key to dim_item.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: item_key
+      - name: sold_date_key
+        description: Foreign key to dim_date.
+        data_tests:
+          - not_null
+      - name: store_key
+        description: Foreign key to dim_store.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_store')
+                field: store_key
+      - name: customer_key
+        description: >
+          Foreign key to dim_customer. No relationships test: it would anti join
+          a hundred million fact rows against sixty five million customers for a
+          guarantee the benchmark already makes.
+      - name: sold_date
+        description: Calendar date of the sale, denormalised from dim_date.
+        data_tests:
+          - not_null
+      - name: is_promotional_sale
+        description: True when the line was attached to a promotion.
+      - name: promotion_channels
+        description: >
+          Comma separated list of the channels the promotion ran on, collapsed
+          from the eight Y/N flags in the source. Null when not promotional.
+      - name: quantity_sold
+        description: Units sold on this line.
+      - name: net_paid_amount
+        description: Amount paid by the customer, excluding tax.
+      - name: gross_margin_amount
+        description: >
+          net_paid_amount minus extended_wholesale_cost_amount. Our margin
+          definition, as distinct from the benchmark's own profit figure.
+        data_tests:
+          - expect_average_greater_than:
+              arguments:
+                min_value: -50
+                group_by_column: sold_date_key
+      - name: benchmark_net_profit_amount
+        description: >
+          The profit figure shipped with TPC-DS. Retained alongside our own
+          margin so the two can be compared rather than silently disagreeing.
+      - name: total_discount_amount
+        description: Extended discount plus coupon amount.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - ticket_number
+              - item_key
+
+  - name: fct_store_returns
+    description: >
+      Store returns at return line grain, one row per item per return ticket.
+      Grain matches fct_store_sales so the two join on ticket number and item.
+      Dated on the return, not the original sale.
+    config:
+      group: retail_analytics
+      access: protected
+      tags: [fact]
+      meta:
+        grain: One row per item per return ticket
+    columns:
+      - name: ticket_number
+        description: Return ticket identifier. Unique only with item_key.
+        data_tests:
+          - not_null
+      - name: item_key
+        description: Foreign key to dim_item.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_item')
+                field: item_key
+      - name: returned_date_key
+        description: Foreign key to dim_date. The date of the return, not the sale.
+        data_tests:
+          - not_null
+      - name: store_key
+        description: Foreign key to dim_store.
+      - name: returned_date
+        description: Calendar date of the return, denormalised from dim_date.
+        data_tests:
+          - not_null
+      - name: quantity_returned
+        description: Units returned on this line.
+      - name: return_amount
+        description: Value of the returned goods, excluding tax.
+      - name: total_refunded_amount
+        description: Cash, reversed charges and store credit combined.
+      - name: net_loss_amount
+        description: Loss on the return as calculated by the benchmark.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - ticket_number
+              - item_key

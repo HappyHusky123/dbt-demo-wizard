@@ -1,23 +1,46 @@
 version: 2
 
 seeds:
-  - name: countrycodes
-    description: Contains country code reference information
+  - name: store_sales_regions
+    description: >
+      Maps US state codes to sales regions and the manager who owns each region.
+
+      TPC-DS has no region concept of its own, so this is the one piece of
+      genuinely local business context in the project. It is a seed rather than a
+      source because it is small, hand maintained, and reviewed in a pull request
+      like any other change.
+
+      Covers all 50 states plus the District of Columbia. Stores in a state not
+      listed here fall back to Unassigned in dim_store rather than null.
     config:
-      quote_columns: false
-      column_types: {code: string, country_name: string}
-      delimiter: ","
-
+      group: retail_analytics
+      tags: [reference]
+      column_types:
+        state_code: varchar(2)
+        state_name: varchar(64)
+        sales_region: varchar(16)
+        region_manager_name: varchar(128)
       meta:
+        owner: jrankin
         contains_pii: false
-        owner: "Smokey the Bear"
-
-      tags: 
-        - nightly
-        - silver
-
-      schema: reference
-      database: analytics
-      enabled: true
-      groups: finance
-      alias: jaffle_country_codes
+    columns:
+      - name: state_code
+        description: Two letter USPS state code. Joined to dim_store on state_code.
+        data_tests:
+          - unique
+          - not_null
+      - name: state_name
+        description: Full state name.
+        data_tests:
+          - not_null
+      - name: sales_region
+        description: Region the state rolls up to.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Northeast', 'Midwest', 'South', 'West']
+      - name: region_manager_name
+        description: Manager accountable for the region.
+        data_tests:
+          - not_null

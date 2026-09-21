@@ -1,13 +1,36 @@
 version: 2
 
 macros:
-  - name: cents_to_dollars
-    description: converts your money amount from cents to the amount in dollars.
+  - name: generate_schema_name
+    description: >
+      Overrides dbt's default schema resolution so that folder level +schema
+      configs land in the fixed STAGE, CURATED and DATA_VIZ schemas in
+      production, and in developer prefixed copies of them everywhere else.
+      Production is identified by target name, which must be set to prod.
     docs:
       show: true
     arguments:
-      - name: column_name
+      - name: custom_schema_name
         type: string
-        description: the name of the column that you want to convert to dollars from cents.
+        description: The +schema value configured on the model or its folder, or none.
+      - name: node
+        type: dict
+        description: The node dbt is resolving a schema for.
 
-  
+  - name: safe_divide
+    description: >
+      Division that returns a default instead of erroring when the denominator
+      is zero or null. Used by the rate and margin percentage calculations in
+      the DATA_VIZ layer.
+    docs:
+      show: true
+    arguments:
+      - name: numerator
+        type: string
+        description: Column or expression to divide.
+      - name: denominator
+        type: string
+        description: Column or expression to divide by.
+      - name: default_value
+        type: string
+        description: SQL literal returned when the denominator is zero or null. Defaults to null.

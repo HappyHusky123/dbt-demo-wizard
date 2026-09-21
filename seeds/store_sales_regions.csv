@@ -1,0 +1,52 @@
+state_code,state_name,sales_region,region_manager_name
+CT,Connecticut,Northeast,Dana Whitfield
+ME,Maine,Northeast,Dana Whitfield
+MA,Massachusetts,Northeast,Dana Whitfield
+NH,New Hampshire,Northeast,Dana Whitfield
+NJ,New Jersey,Northeast,Dana Whitfield
+NY,New York,Northeast,Dana Whitfield
+PA,Pennsylvania,Northeast,Dana Whitfield
+RI,Rhode Island,Northeast,Dana Whitfield
+VT,Vermont,Northeast,Dana Whitfield
+IL,Illinois,Midwest,Marcus Obi
+IN,Indiana,Midwest,Marcus Obi
+IA,Iowa,Midwest,Marcus Obi
+KS,Kansas,Midwest,Marcus Obi
+MI,Michigan,Midwest,Marcus Obi
+MN,Minnesota,Midwest,Marcus Obi
+MO,Missouri,Midwest,Marcus Obi
+NE,Nebraska,Midwest,Marcus Obi
+ND,North Dakota,Midwest,Marcus Obi
+OH,Ohio,Midwest,Marcus Obi
+SD,South Dakota,Midwest,Marcus Obi
+WI,Wisconsin,Midwest,Marcus Obi
+AL,Alabama,South,Priya Raghunathan
+AR,Arkansas,South,Priya Raghunathan
+DE,Delaware,South,Priya Raghunathan
+DC,District of Columbia,South,Priya Raghunathan
+FL,Florida,South,Priya Raghunathan
+GA,Georgia,South,Priya Raghunathan
+KY,Kentucky,South,Priya Raghunathan
+LA,Louisiana,South,Priya Raghunathan
+MD,Maryland,South,Priya Raghunathan
+MS,Mississippi,South,Priya Raghunathan
+NC,North Carolina,South,Priya Raghunathan
+OK,Oklahoma,South,Priya Raghunathan
+SC,South Carolina,South,Priya Raghunathan
+TN,Tennessee,South,Priya Raghunathan
+TX,Texas,South,Priya Raghunathan
+VA,Virginia,South,Priya Raghunathan
+WV,West Virginia,South,Priya Raghunathan
+AK,Alaska,West,Sofia Alvarez
+AZ,Arizona,West,Sofia Alvarez
+CA,California,West,Sofia Alvarez
+CO,Colorado,West,Sofia Alvarez
+HI,Hawaii,West,Sofia Alvarez
+ID,Idaho,West,Sofia Alvarez
+MT,Montana,West,Sofia Alvarez
+NV,Nevada,West,Sofia Alvarez
+NM,New Mexico,West,Sofia Alvarez
+OR,Oregon,West,Sofia Alvarez
+UT,Utah,West,Sofia Alvarez
+WA,Washington,West,Sofia Alvarez
+WY,Wyoming,West,Sofia Alvarez

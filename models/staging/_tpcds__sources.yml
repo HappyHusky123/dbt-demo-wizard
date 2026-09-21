@@ -1,0 +1,94 @@
+version: 2
+
+sources:
+  - name: tpcds
+    description: >
+      TPC-DS retail benchmark data, read only through the SFC_SAMPLES.SAMPLE_DATA
+      inbound share. The schema is driven by the tpcds_schema variable so the
+      scale factor can be changed without editing this file.
+
+      No freshness checks are configured. A static share has no load timestamps,
+      so a loaded_at_field would only ever produce a false failure.
+    database: SNOWFLAKE_SAMPLE_DATA
+    schema: "{{ var('tpcds_schema') }}"
+    loader: snowflake_share
+    config:
+      tags:
+        - tpcds
+        - sample_data
+      meta:
+        owner: jrankin
+        contains_pii: false
+        source_system: Snowflake sample data share
+
+    tables:
+      - name: store_sales
+        description: >
+          Transaction line items for in store purchases. The largest table in the
+          benchmark at roughly 28.8 billion rows at the 10 TB scale factor.
+          Partitioned on ss_sold_date_sk, which is why every downstream model
+          filters on it.
+        config:
+          meta:
+            grain: One row per item per sales ticket
+
+      - name: store_returns
+        description: >
+          Line items returned to a store. Joins back to store_sales on the
+          combination of item key and ticket number. Partitioned on
+          sr_returned_date_sk.
+        config:
+          meta:
+            grain: One row per item per return ticket
+
+      - name: date_dim
+        description: >
+          Conformed date dimension covering 1900 through 2100. d_date_sk is the
+          Julian day number, which is what makes the date key filters in staging
+          readable as integers.
+        config:
+          meta:
+            grain: One row per calendar day
+
+      - name: item
+        description: >
+          Product catalogue with a slowly changing type 2 history. i_item_sk
+          identifies a specific version of a product, i_item_id identifies the
+          product across versions.
+        config:
+          meta:
+            grain: One row per product version
+
+      - name: customer
+        description: Customer master, roughly 65 million rows at the 10 TB scale factor.
+        config:
+          meta:
+            grain: One row per customer
+
+      - name: customer_address
+        description: Address dimension referenced by customers, stores and sales.
+        config:
+          meta:
+            grain: One row per address
+
+      - name: customer_demographics
+        description: >
+          Demographic attribute combinations. Snowflaked off customer rather than
+          held on it, so reaching gender or marital status needs a second join.
+        config:
+          meta:
+            grain: One row per unique demographic combination
+
+      - name: store
+        description: >
+          Physical store dimension with a slowly changing type 2 history, same
+          shape as item. Roughly 1,000 rows.
+        config:
+          meta:
+            grain: One row per store version
+
+      - name: promotion
+        description: Marketing promotions, including the channels each one ran on.
+        config:
+          meta:
+            grain: One row per promotion

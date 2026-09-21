@@ -1,0 +1,9 @@
+target/
+dbt_packages/
+logs/
+venv/
+profiles.yml
+package-lock.yml
+creds/
+.user.yml
+dbt_internal_packages/
