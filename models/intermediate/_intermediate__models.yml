@@ -196,10 +196,17 @@ models:
         description: >
           net_paid_amount minus extended_wholesale_cost_amount. Our margin
           definition, as distinct from the benchmark's own profit figure.
+
+          TPC-DS generates wholesale costs above what the customer pays, so this
+          is negative on essentially every line. The daily average ran between
+          -829.92 and -827.44 across the default seven day window (observed
+          2026-09-22), which is why the floor below is -1000 rather than zero.
+          The test is a guardrail against the formula changing, not an assertion
+          that the benchmark is profitable.
         data_tests:
           - expect_average_greater_than:
               arguments:
-                min_value: -50
+                min_value: -1000
                 group_by_column: sold_date_key
       - name: benchmark_net_profit_amount
         description: >

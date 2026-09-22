@@ -125,6 +125,10 @@ models:
         description: Distinct item versions sold in this category.
       - name: units_sold
         description: Units sold.
+      - name: gross_sales_amount
+        description: Extended sales price before discounts and tax.
+      - name: discount_amount
+        description: Extended discounts plus coupons.
       - name: net_sales_amount
         description: Amount paid by customers, excluding tax.
       - name: gross_margin_amount
@@ -137,6 +141,8 @@ models:
         description: Promotional sales as a fraction of net sales.
       - name: units_returned
         description: Units returned in this category in this month. Zero filled.
+      - name: return_amount
+        description: Value of goods returned in this category in this month. Zero filled.
       - name: return_rate_pct
         description: >
           Return amount as a fraction of gross sales in the same month. Returns are
@@ -193,6 +199,8 @@ models:
         description: Net sales minus extended wholesale cost.
       - name: gross_margin_pct
         description: Gross margin as a fraction of net sales.
+      - name: discount_amount
+        description: Extended discounts plus coupons.
       - name: sales_per_customer
         description: Net sales divided by distinct active customers.
       - name: average_transaction_amount

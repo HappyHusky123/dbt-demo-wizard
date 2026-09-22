@@ -138,6 +138,13 @@ models:
         description: Year of birth. Combined with birth month and day in dim_customer.
       - name: preferred_customer_flag
         description: Y or N. Converted to a boolean in dim_customer.
+      - name: first_sales_date_key
+        description: Foreign key to stg_tpcds__date. The customer's first purchase.
+      - name: last_review_date_key
+        description: >
+          Foreign key to stg_tpcds__date. The source column is c_last_review_date
+          rather than c_last_review_date_sk, but it holds a d_date_sk value like
+          every other date column in the benchmark, so it is renamed to match.
 
   - name: stg_tpcds__customer_address
     description: Address dimension, roughly 32.5 million rows at the 10 TB scale factor.

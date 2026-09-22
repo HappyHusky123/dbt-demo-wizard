@@ -38,10 +38,12 @@ renamed as (
         c_birth_year            as birth_year,
         c_birth_country         as birth_country_name,
 
-        -- lifecycle date keys
+        -- lifecycle date keys. c_last_review_date breaks the source's own _sk
+        -- naming convention but holds a d_date_sk value like the other two, so
+        -- it is renamed to match what it actually is.
         c_first_sales_date_sk   as first_sales_date_key,
         c_first_shipto_date_sk  as first_ship_to_date_key,
-        c_last_review_date_sk   as last_review_date_key
+        c_last_review_date      as last_review_date_key
 
     from source
 
